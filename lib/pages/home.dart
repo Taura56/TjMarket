@@ -237,6 +237,20 @@ class _HomeState extends State<HomePage> {
                     child: Icon(Icons.error, size: 50, color: Colors.red));
               },
             ),
+             Text(
+            product['productName'],
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: _isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+              Text(
+              '\$${product['price'].toStringAsFixed(2)}',  // Format as currency
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: _isDarkMode ? Colors.white : Colors.black,
+              ),
+            ),
           ],
         ),
       ),
