@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "633583484719",
+    "project_id": "kibu-sells",
+    "storage_bucket": "kibu-sells.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:633583484719:android:f6e41b600f01d7b9bf2bda",
+        "android_client_info": {
+          "package_name": "com.example.tjmarket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMzCPxNZoLslTCBUZbuESpS3au645Gqf8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
