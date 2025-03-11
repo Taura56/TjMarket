@@ -244,7 +244,7 @@ class _HomeState extends State<HomePage> {
               color: _isDarkMode ? Colors.white : Colors.black,
             ),
           ),
-              Text(
+              Text('PRICE: '
               '\$${product['price'].toStringAsFixed(2)}',  // Format as currency
               style: TextStyle(
                 fontWeight: FontWeight.bold,
