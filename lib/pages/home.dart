@@ -245,7 +245,7 @@ class _HomeState extends State<HomePage> {
             ),
           ),
               Text('PRICE: '
-              '\$${product['price'].toStringAsFixed(2)}',  // Format as currency
+              'Ksh ${product['price'].toStringAsFixed(2)}',  // Format as currency
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: _isDarkMode ? Colors.white : Colors.black,

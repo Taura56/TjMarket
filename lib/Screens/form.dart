@@ -64,7 +64,7 @@ class _ProductFormState extends State<ProductForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold(backgroundColor: Colors.blue[900],
       appBar: AppBar(title: Text('Add Product')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
