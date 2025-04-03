@@ -59,7 +59,7 @@ class _SignupFormState extends State<SignupForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(backgroundColor: Colors.blue[900],
-      appBar: AppBar(title: Text('Sign Up')),
+      appBar: AppBar(title: Text('Sign Up Page')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -67,30 +67,109 @@ class _SignupFormState extends State<SignupForm> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(100), 
+                child:  Image.asset(
+                'assets/icon/icon.png', 
+                height: 200, 
+              ),
+              ),
+              SizedBox(height: 20,),
               TextFormField(
                 controller: _usernameController,
-                decoration: InputDecoration(labelText: 'Username'),
+                style: TextStyle(color: Colors.white), 
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.blue[700],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(color: Colors.blue),
+                  ),
+                  errorStyle: TextStyle(color: Colors.red),
+                  ),
                 validator: (value) => value!.trim().isEmpty ? 'Enter username' : null,
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(color: Colors.white), 
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.blue[700],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(color: Colors.blue),
+                  ),
+                  errorStyle: TextStyle(color: Colors.red),
+                  ),
                 validator: (value) => value!.trim().isEmpty ? 'Enter email' : null,
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                style: TextStyle(color: Colors.white), 
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.blue[700],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(color: Colors.blue),
+                  ),
+                  errorStyle: TextStyle(
+                    color: Colors.red[500],
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.bold, // Example: bold font weight
+                  ),
+                  ),
                 obscureText: true,
                 validator: (value) =>
-                    value!.trim().length < 6 ? 'Password must be at least 6 characters' : null,
+                    value!.trim().length < 8 ? 'Password must be at least 8 characters' : null,
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _confirmPasswordController,
-                decoration: InputDecoration(labelText: 'Confirm Password'),
+                style: TextStyle(color: Colors.white), 
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  labelStyle: TextStyle(color: Colors.white),
+                  filled: true,
+                  fillColor: Colors.blue[700],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: BorderSide(color: Colors.blue),
+                  ),
+                  errorStyle: TextStyle(
+                    color: Colors.red[500],
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.bold, // Example: bold font weight
+                  ),
+                  ),
                 obscureText: true,
                 validator: (value) =>
                     value != _passwordController.text ? 'Passwords do not match' : null,
@@ -100,13 +179,13 @@ class _SignupFormState extends State<SignupForm> {
                   ? CircularProgressIndicator()
                   : ElevatedButton(
                       onPressed: _signup,
-                      child: Text('Sign Up'),
+                      child: Text('Sign Up',style: TextStyle(color: Colors.black,fontSize: 20.0,),),
                     ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: Text('Already have an account? Log in'),
+                child: Text('Already have an account? Log in',style: TextStyle(color: Colors.white,fontSize: 18.0,),),
               ),
             ],
           ),

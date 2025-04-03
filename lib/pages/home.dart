@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tjmarket/Screens/form.dart';  // Correct Chat Page
+import 'package:tjmarket/Screens/form.dart';  
 import 'package:tjmarket/pages/chart.dart';
 import 'package:tjmarket/pages/chatscreen.dart';
 import 'package:tjmarket/services/storage/storage.dart';
@@ -17,6 +17,13 @@ class _HomeState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _isDarkMode = false;
   String? _userId;
+  String _searchQuery = '';
+
+  void _updateSearchQuery(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+  }
 
   @override
   void initState() {
@@ -84,43 +91,59 @@ class _HomeState extends State<HomePage> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      color: Colors.blue[900],
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.home, color: Colors.white),
-            onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
+  return Container(
+    color: Colors.blue[900],
+    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.home, color: Colors.white),
+          onPressed: () {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.message, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatPage()),
+            );
+          },
+        ),
+        Expanded( 
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0,vertical: 2.0),
+            child: TextField(
+              onChanged: _updateSearchQuery,
+              style: TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                hintStyle: TextStyle(color: Colors.white),
+                prefixIcon: Icon(Icons.search, color: Colors.white),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.blue[700],
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.message, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ChatPage()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-          Switch(
-            value: _isDarkMode,
-            onChanged: (value) {
-              setState(() {
-                _isDarkMode = value;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        Switch(
+          value: _isDarkMode,
+          onChanged: (value) {
+            setState(() {
+              _isDarkMode = value;
+            });
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSellTodayContainer() {
     return Padding(
@@ -176,21 +199,29 @@ class _HomeState extends State<HomePage> {
   }
 
   Widget _buildProductList() {
-    return Consumer<Storage>(
-      builder: (context, storage, child) {
-        return ListView.builder(
-          controller: _scrollController,
-          itemCount: storage.products.length + (storage.isLoading ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == storage.products.length) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _buildPostItem(storage.products[index]);
-          },
-        );
-      },
-    );
-  }
+  return Consumer<Storage>(
+    builder: (context, storage, child) {
+      List<Map<String, dynamic>> filteredProducts = storage.products.where((product) {
+        final productName = product['productName'].toString().toLowerCase();
+        final category = product['category'].toString().toLowerCase();
+        final description = product['description'].toString().toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return productName.contains(query) || description.contains(query)|| category.contains(query);
+      }).toList();
+
+      return ListView.builder(
+        controller: _scrollController,
+        itemCount: filteredProducts.length + (storage.isLoading ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredProducts.length) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildPostItem(filteredProducts[index]);
+        },
+      );
+    },
+  );
+}
 
   Widget _buildPostItem(Map<String, dynamic> product) {
     return Padding(
@@ -240,17 +271,17 @@ class _HomeState extends State<HomePage> {
             ),
             Row(
               children: [
-                Text('Message Seller'),
+                Text('Message Seller',style: TextStyle(color:  _isDarkMode ? Colors.white : Colors.black,fontWeight: FontWeight.bold),),
                 IconButton(
                   icon: Icon(Icons.message, color: _isDarkMode ? Colors.white : Colors.black),
                   onPressed: () {
                     String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                    String? sellerId = product['userId']; // Ensure this is stored in Firestore
+                    String? sellerId = product['userId']; 
                     String? sellerName = product['username'];
 
                     if (currentUserId != null && sellerId != null && sellerId != currentUserId) {
                       List<String> chatIds = [currentUserId, sellerId];
-                      chatIds.sort(); // Ensure a consistent chatId format
+                      chatIds.sort(); 
                       String chatId = chatIds.join("_");
 
                       Navigator.push(
@@ -274,14 +305,22 @@ class _HomeState extends State<HomePage> {
               ],),
           
              Text(
-            product['productName'],
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: _isDarkMode ? Colors.white : Colors.black,
-            ),
-          ),
+                product['productName'],
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+              SizedBox(height: 8.0,),
+              Text(
+                product['description'],
+                style: TextStyle(
+                  color: _isDarkMode ? Colors.white : Colors.black,
+                ),
+              ),
+              SizedBox(height: 8.0,),
               Text('PRICE: '
-              'Ksh ${product['price'].toStringAsFixed(2)}',  // Format as currency
+              'Ksh ${product['price'].toStringAsFixed(2)}',  
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: _isDarkMode ? Colors.white : Colors.black,

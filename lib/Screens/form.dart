@@ -115,7 +115,7 @@ class _ProductFormState extends State<ProductForm> {
               SizedBox(height: 10),
               DropdownButtonFormField(
                 value: _category,
-                items: ['Electronics', 'Clothing', 'Home & Kitchen', 'Toys']
+                items: ['Electronics', 'Clothing', 'Home & Kitchen', 'Toys','Stationery','Beauty & Personal Care']
                     .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                     .toList(),
                 onChanged: (value) => setState(() => _category = value.toString()),
