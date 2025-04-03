@@ -15,7 +15,7 @@ class _ProductFormState extends State<ProductForm> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _descriptionController =TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   String _category = 'Electronics';
   bool _isLoading = false;
   File? _image;
@@ -64,7 +64,8 @@ class _ProductFormState extends State<ProductForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: Colors.blue[900],
+    return Scaffold(
+      backgroundColor: Colors.blue[900],
       appBar: AppBar(title: Text('Add Product')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -76,36 +77,62 @@ class _ProductFormState extends State<ProductForm> {
                 onTap: _pickImage,
                 child: Container(
                   height: 150,
-                  color: Colors.grey[300],
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.grey),
+                  ),
                   child: _image == null
-                      ? Icon(Icons.add_a_photo, size: 50, color: Colors.grey[700])
-                      : Image.file(_image!, fit: BoxFit.cover),
+                      ? Icon(Icons.add_a_photo, size: 100, color: Colors.black)
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: Image.file(_image!, fit: BoxFit.cover),
+                        ),
                 ),
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Product Name'),
+                decoration: InputDecoration(
+                  labelText: 'Product Name',
+                  labelStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
                 validator: (value) => value!.isEmpty ? 'Enter product name' : null,
               ),
+              SizedBox(height: 10),
               TextFormField(
                 controller: _priceController,
-                decoration: InputDecoration(labelText: 'Price'),
+                decoration: InputDecoration(
+                  labelText: 'Price',
+                  labelStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) => value!.isEmpty ? 'Enter price' : null,
               ),
+              SizedBox(height: 10),
               DropdownButtonFormField(
                 value: _category,
                 items: ['Electronics', 'Clothing', 'Home & Kitchen', 'Toys']
                     .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                     .toList(),
                 onChanged: (value) => setState(() => _category = value.toString()),
-                decoration: InputDecoration(labelText: 'Category'),
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  labelStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
               ),
               SizedBox(height: 10),
               TextFormField(
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: 'Product Description'),
+                decoration: InputDecoration(
+                  labelText: 'Product Description',
+                  labelStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
                 validator: (value) => value!.isEmpty ? 'Describe your product' : null,
               ),
               SizedBox(height: 20),
@@ -113,7 +140,12 @@ class _ProductFormState extends State<ProductForm> {
                   ? CircularProgressIndicator()
                   : ElevatedButton(
                       onPressed: _uploadProduct,
-                      child: Text('Submit Product'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                        backgroundColor: Colors.white,
+                      ),
+                      child: Text('Submit Product', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
                     ),
             ],
           ),

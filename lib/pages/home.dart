@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tjmarket/Screens/form.dart';  // Correct Chat Page
 import 'package:tjmarket/pages/chart.dart';
+import 'package:tjmarket/pages/chatscreen.dart';
 import 'package:tjmarket/services/storage/storage.dart';
 
 class HomePage extends StatefulWidget {
@@ -237,6 +238,41 @@ class _HomeState extends State<HomePage> {
                     child: Icon(Icons.error, size: 50, color: Colors.red));
               },
             ),
+            Row(
+              children: [
+                Text('Message Seller'),
+                IconButton(
+                  icon: Icon(Icons.message, color: _isDarkMode ? Colors.white : Colors.black),
+                  onPressed: () {
+                    String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                    String? sellerId = product['userId']; // Ensure this is stored in Firestore
+                    String? sellerName = product['username'];
+
+                    if (currentUserId != null && sellerId != null && sellerId != currentUserId) {
+                      List<String> chatIds = [currentUserId, sellerId];
+                      chatIds.sort(); // Ensure a consistent chatId format
+                      String chatId = chatIds.join("_");
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                            chatId: chatId,
+                            receiverId: sellerId,
+                            receiverName: sellerName ?? "Seller",
+                          ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Error: Unable to start chat.")),
+                      );
+                    }
+                  },
+                ),
+
+              ],),
+          
              Text(
             product['productName'],
             style: TextStyle(
