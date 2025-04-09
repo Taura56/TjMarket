@@ -74,16 +74,76 @@ class Storage with ChangeNotifier {
   }
 
   // Delete image
-  Future<void> deleteImage(String imageUrl) async {
-    try {
-      _products.removeWhere((product) => product['image'] == imageUrl);
-      final String path = extractPathFromUrl(imageUrl);
-      await _firebaseStorage.ref(path).delete();
+  Future<void> deleteImage(String imageUrl, String? image, BuildContext context) async {
+  _isLoading = true;
+  notifyListeners();
+
+  try {
+    // Confirmation dialog
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm Delete"),
+          content: const Text("Are you sure you want to delete this product?"),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text("Delete"),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+
+    if (!confirmDelete) {
+      _isLoading = false;
       notifyListeners();
-    } catch (e) {
-      print("Error deleting image: $e");
+      return;
     }
+
+    // Delete from Firebase Storage
+    final String path = extractPathFromUrl(imageUrl);
+    print('Deleting path: $path');
+    await _firebaseStorage.ref(path).delete();
+    print('Firebase Storage deletion successful');
+
+    // Delete the product document from Firestore
+    if (image != null) {
+      print('Deleting Firestore product: $image');
+      await _firestore.collection('Products').doc(image).delete(); // Delete the document
+      print('Firestore product deletion successful');
+    } else {
+        print("Product image is null");
+    }
+
+    // Remove from local list
+    _products.removeWhere((product) => product['image'] == imageUrl);
+
+    _isLoading = false;
+    notifyListeners();
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Product deleted successfully.")));
+
+  } on FirebaseException catch (e) {
+    _isLoading = false;
+    notifyListeners();
+
+    // Show error message
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Firebase error deleting product: ${e.message}")));
+    print("Firebase error deleting product: ${e.message}");
+  } catch (e) {
+    _isLoading = false;
+    notifyListeners();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("An unexpected error occurred.")));
+    print("Error deleting product: $e");
   }
+}
 
   // Extract file path from Firebase Storage URL
   String extractPathFromUrl(String url) {

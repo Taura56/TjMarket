@@ -224,51 +224,74 @@ class _HomeState extends State<HomePage> {
 }
 
   Widget _buildPostItem(Map<String, dynamic> product) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: _isDarkMode ? Colors.grey[800] : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.blueAccent,
-                    backgroundImage: product['profileImageUrl'] != null
-                        ? NetworkImage(product['profileImageUrl'])
-                        : null,
-                    child: product['profileImageUrl'] == null
-                        ? const Icon(Icons.person, color: Colors.white)
-                        : null,
+  final currentUser = FirebaseAuth.instance.currentUser; 
+  final isCurrentUserPost = currentUser != null && currentUser.uid == product['userId'];
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Container(
+      decoration: BoxDecoration(
+        color: _isDarkMode ? Colors.grey[800] : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.blueAccent,
+                  backgroundImage: product['profileImageUrl'] != null
+                      ? NetworkImage(product['profileImageUrl'])
+                      : null,
+                  child: product['profileImageUrl'] == null
+                      ? const Icon(Icons.person, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  product['username'] ?? 'Unknown User',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : Colors.black,
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    product['username'] ?? 'Unknown User',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _isDarkMode ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.more_horiz, color: Colors.grey),
-                ],
-              ),
+                ),
+                const Spacer(),
+                if (isCurrentUserPost) // Conditionally show the menu
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        Provider.of<Storage>(context, listen: false).deleteImage(
+                          product['image'],
+                          product['id'],
+                          context,
+                        );
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
+                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
+                  )
+                else
+                  const Icon(Icons.more_horiz, color: Colors.grey), // Show icon, but no menu if not the user's post.
+              ],
             ),
-            Image.network(
-              product['image'],
-              errorBuilder: (context, error, stackTrace) {
-                return const Center(
-                    child: Icon(Icons.error, size: 50, color: Colors.red));
-              },
-            ),
+          ),
+          Image.network(
+            product['image'],
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Icon(Icons.error, size: 50, color: Colors.red),
+              );
+            },
+          ),
             Row(
               children: [
                 Text('Message Seller',style: TextStyle(color:  _isDarkMode ? Colors.white : Colors.black,fontWeight: FontWeight.bold),),
