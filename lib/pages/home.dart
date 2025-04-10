@@ -1,29 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tjmarket/Screens/form.dart';  
+import 'package:tjmarket/Screens/form.dart';
 import 'package:tjmarket/pages/chart.dart';
 import 'package:tjmarket/pages/chatscreen.dart';
 import 'package:tjmarket/services/storage/storage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
   @override
-  _HomeState createState() => _HomeState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeState extends State<HomePage> {
+class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _isDarkMode = false;
   String? _userId;
   String _searchQuery = '';
-
-  void _updateSearchQuery(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
-  }
 
   @override
   void initState() {
@@ -35,6 +28,12 @@ class _HomeState extends State<HomePage> {
       }
     });
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _fetchUserId() {
@@ -63,14 +62,49 @@ class _HomeState extends State<HomePage> {
 
   Future<void> _uploadProfileImage() async {
     if (_userId == null) return;
-    final storage = Provider.of<Storage>(context, listen: false);
-    await storage.uploadProfilePicture(_userId!);
+    await Provider.of<Storage>(context, listen: false).uploadProfilePicture(_userId!);
+  }
+
+  void _updateSearchQuery(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+  }
+
+  void _navigateToProductForm() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ProductForm()));
+  }
+
+  void _navigateToChatPage() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage()));
+  }
+
+  void _toggleDarkMode(bool value) {
+    setState(() => _isDarkMode = value);
+  }
+
+  void _openChatWithSeller(String sellerId, String sellerName) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && sellerId != user.uid) {
+      final chatId = [user.uid, sellerId]..sort();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId.join('_'),
+            receiverId: sellerId,
+            receiverName: sellerName,
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: theme,
       home: Scaffold(
         body: SafeArea(
@@ -91,59 +125,47 @@ class _HomeState extends State<HomePage> {
   }
 
   Widget _buildHeader() {
-  return Container(
-    color: Colors.blue[900],
-    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.home, color: Colors.white),
-          onPressed: () {
-            Navigator.popUntil(context, (route) => route.isFirst);
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.message, color: Colors.white),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage()),
-            );
-          },
-        ),
-        Expanded( 
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0,vertical: 2.0),
-            child: TextField(
-              onChanged: _updateSearchQuery,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                hintStyle: TextStyle(color: Colors.white),
-                prefixIcon: Icon(Icons.search, color: Colors.white),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide.none,
+    return Container(
+      color: Colors.blue[900],
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.white),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+          IconButton(
+            icon: const Icon(Icons.message, color: Colors.white),
+            onPressed: _navigateToChatPage,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: TextField(
+                onChanged: _updateSearchQuery,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  hintStyle: const TextStyle(color: Colors.white),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.blue[700],
                 ),
-                filled: true,
-                fillColor: Colors.blue[700],
               ),
             ),
           ),
-        ),
-        Switch(
-          value: _isDarkMode,
-          onChanged: (value) {
-            setState(() {
-              _isDarkMode = value;
-            });
-          },
-        ),
-      ],
-    ),
-  );
-}
+          Switch(
+            value: _isDarkMode,
+            onChanged: _toggleDarkMode,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSellTodayContainer() {
     return Padding(
@@ -178,18 +200,13 @@ class _HomeState extends State<HomePage> {
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
-                  'What do you want to sell Today?',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  'What do you want to sell today?', 
+                  style: TextStyle(fontWeight: FontWeight.bold)
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.photo_camera, color: Colors.blue),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ProductForm()),
-                  );
-                },
+                onPressed: _navigateToProductForm,
               ),
             ],
           ),
@@ -199,154 +216,182 @@ class _HomeState extends State<HomePage> {
   }
 
   Widget _buildProductList() {
-  return Consumer<Storage>(
-    builder: (context, storage, child) {
-      List<Map<String, dynamic>> filteredProducts = storage.products.where((product) {
-        final productName = product['productName'].toString().toLowerCase();
-        final category = product['category'].toString().toLowerCase();
-        final description = product['description'].toString().toLowerCase();
-        final query = _searchQuery.toLowerCase();
-        return productName.contains(query) || description.contains(query)|| category.contains(query);
-      }).toList();
+    return Consumer<Storage>(
+      builder: (context, storage, child) {
+        final filtered = storage.products.where((product) {
+          final query = _searchQuery.toLowerCase();
+          return (product['productName'] ?? '').toLowerCase().contains(query) ||
+                 (product['description'] ?? '').toLowerCase().contains(query) ||
+                 (product['category'] ?? '').toLowerCase().contains(query);
+        }).toList();
 
-      return ListView.builder(
-        controller: _scrollController,
-        itemCount: filteredProducts.length + (storage.isLoading ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == filteredProducts.length) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return _buildPostItem(filteredProducts[index]);
-        },
-      );
-    },
-  );
-}
-
-  Widget _buildPostItem(Map<String, dynamic> product) {
-  final currentUser = FirebaseAuth.instance.currentUser; 
-  final isCurrentUserPost = currentUser != null && currentUser.uid == product['userId'];
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Container(
-      decoration: BoxDecoration(
-        color: _isDarkMode ? Colors.grey[800] : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
+        if (filtered.isEmpty && !storage.isLoading) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.blueAccent,
-                  backgroundImage: product['profileImageUrl'] != null
-                      ? NetworkImage(product['profileImageUrl'])
-                      : null,
-                  child: product['profileImageUrl'] == null
-                      ? const Icon(Icons.person, color: Colors.white)
-                      : null,
-                ),
-                const SizedBox(width: 10),
+                Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
                 Text(
-                  product['username'] ?? 'Unknown User',
+                  _searchQuery.isEmpty 
+                      ? 'No products available' 
+                      : 'No products match your search',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _isDarkMode ? Colors.white : Colors.black,
+                    fontSize: 16,
+                    color: Colors.grey[600],
                   ),
                 ),
-                const Spacer(),
-                if (isCurrentUserPost) // Conditionally show the menu
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'delete') {
-                        Provider.of<Storage>(context, listen: false).deleteImage(
-                          product['image'],
-                          product['id'],
-                          context,
-                        );
-                      }
-                    },
-                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Text('Delete'),
-                      ),
-                    ],
-                    icon: const Icon(Icons.more_horiz, color: Colors.grey),
-                  )
-                else
-                  const Icon(Icons.more_horiz, color: Colors.grey), // Show icon, but no menu if not the user's post.
               ],
             ),
-          ),
-          Image.network(
-            product['image'],
-            errorBuilder: (context, error, stackTrace) {
+          );
+        }
+
+        return ListView.builder(
+          controller: _scrollController,
+          itemCount: filtered.length + (storage.isLoading ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == filtered.length) {
               return const Center(
-                child: Icon(Icons.error, size: 50, color: Colors.red),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
               );
-            },
-          ),
-            Row(
-              children: [
-                Text('Message Seller',style: TextStyle(color:  _isDarkMode ? Colors.white : Colors.black,fontWeight: FontWeight.bold),),
-                IconButton(
-                  icon: Icon(Icons.message, color: _isDarkMode ? Colors.white : Colors.black),
-                  onPressed: () {
-                    String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                    String? sellerId = product['userId']; 
-                    String? sellerName = product['username'];
+            }
+            return _buildPostItem(filtered[index]);
+          },
+        );
+      },
+    );
+  }
 
-                    if (currentUserId != null && sellerId != null && sellerId != currentUserId) {
-                      List<String> chatIds = [currentUserId, sellerId];
-                      chatIds.sort(); 
-                      String chatId = chatIds.join("_");
+  Widget _buildPostItem(Map<String, dynamic> product) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isCurrentUserPost = currentUser?.uid == product['userId'];
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            chatId: chatId,
-                            receiverId: sellerId,
-                            receiverName: sellerName ?? "Seller",
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _isDarkMode ? Colors.grey[800] : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.blueAccent,
+                backgroundImage: product['profileImageUrl'] != null
+                    ? NetworkImage(product['profileImageUrl'])
+                    : null,
+                child: product['profileImageUrl'] == null
+                    ? const Icon(Icons.person, color: Colors.white)
+                    : null,
+              ),
+              title: Text(
+                product['username'] ?? 'Unknown User',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Category: ${product['category'] ?? 'Uncategorized'}',
+                style: TextStyle(
+                  color: _isDarkMode ? Colors.grey[300] : Colors.grey[600],
+                ),
+              ),
+              trailing: isCurrentUserPost
+                  ? PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          Provider.of<Storage>(context, listen: false).deleteImage(
+                            product['image'],
+                            product['id'],
+                            context,
+                          );
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'delete', child: Text('Delete Sold Product')),
+                      ],
+                    )
+                  : null,
+            ),
+            GestureDetector(
+              onTap: () {
+                // Show full image or product details
+              },
+              child: Image.network(
+                product['image'],
+                width: double.infinity,
+                height: 250,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 200,
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Icon(Icons.error_outline, size: 50, color: Colors.grey),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product['productName'] ?? 'Unnamed Product',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Error: Unable to start chat.")),
-                      );
-                    }
-                  },
-                ),
-
-              ],),
-          
-             Text(
-                product['productName'],
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: _isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              SizedBox(height: 8.0,),
-              Text(
-                product['description'],
-                style: TextStyle(
-                  color: _isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              SizedBox(height: 8.0,),
-              Text('PRICE: '
-              'Ksh ${product['price'].toStringAsFixed(2)}',  
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: _isDarkMode ? Colors.white : Colors.black,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[800],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Ksh ${product['price'].toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    product['description'] ?? 'No description available',
+                    style: TextStyle(
+                      color: _isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (!isCurrentUserPost)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _openChatWithSeller(
+                          product['userId'],
+                          product['username'] ?? 'Seller',
+                        );
+                      },
+                      icon: const Icon(Icons.message),
+                      label: const Text('Message Seller'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

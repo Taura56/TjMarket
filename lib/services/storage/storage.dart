@@ -18,6 +18,13 @@ class Storage with ChangeNotifier {
   bool get isUploading => _isUploading;
   String? get profileImageUrl => _profileImageUrl;
 
+  // Clear products list (useful for refresh operations)
+  void clearProducts() {
+    _products.clear();
+    _lastDocument = null;
+    notifyListeners();
+  }
+
   // Fetch images using pagination
   Future<void> fetchImages() async {
     if (_isLoading) return; // Prevent multiple simultaneous fetches
@@ -42,27 +49,43 @@ class Storage with ChangeNotifier {
 
         for (var doc in snapshot.docs) {
           // Fetch user details for the product
-          String userId = doc['userId'];
-          DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
-
-          // Get the profile image URL from the path
-        String? profileImagePath = userDoc['profileImagePath'];
-        String? profileImageUrl;
-        if (profileImagePath != null) {
-          profileImageUrl = await _firebaseStorage.ref(profileImagePath).getDownloadURL();
-        }
+          String userId = doc['userId'] ?? '';
+          
+          String username = 'Unknown User';
+          String? profileImageUrl;
+          
+          try {
+            // Only fetch user details if userId exists
+            if (userId.isNotEmpty) {
+              DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
+              if (userDoc.exists) {
+                username = userDoc['username'] ?? 'Unknown User';
+                
+                // Get the profile image URL from the path
+                String? profileImagePath = userDoc['profileImagePath'];
+                if (profileImagePath != null && profileImagePath.isNotEmpty) {
+                  profileImageUrl = await _firebaseStorage.ref(profileImagePath).getDownloadURL();
+                }
+              }
+            }
+          } catch (e) {
+            print('Error fetching user details: $e');
+            // Continue with default values if user details can't be fetched
+          }
 
           // Add product details to the list
-           _products.add({
-          'image': doc['image'],
-          'productName': doc['productName'],
-          'description': doc['description'],
-          'category': doc['category'],
-          'price': doc['price'],
-          'userId': userId,
-          'username': userDoc['username'],
-          'profileImageUrl': profileImageUrl,
-        });
+          _products.add({
+            'id': doc.id, // Store document ID for easy deletion
+            'image': doc['image'],
+            'productName': doc['productName'],
+            'description': doc['description'],
+            'category': doc['category'],
+            'price': doc['price'],
+            'userId': userId,
+            'username': username,
+            'profileImageUrl': profileImageUrl,
+            'createdAt': doc['createdAt'],
+          });
         }
       }
     } catch (e) {
@@ -73,83 +96,69 @@ class Storage with ChangeNotifier {
     }
   }
 
-  // Delete image
-  Future<void> deleteImage(String imageUrl, String? image, BuildContext context) async {
-  _isLoading = true;
-  notifyListeners();
+  // Delete image and product document
+  Future<void> deleteImage(String imageUrl, String productId, BuildContext context) async {
+    _isLoading = true;
+    notifyListeners();
 
-  try {
-    // Confirmation dialog
-    bool confirmDelete = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Confirm Delete"),
-          content: const Text("Are you sure you want to delete this product?"),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
-            TextButton(
-              child: const Text("Delete"),
-              onPressed: () => Navigator.of(context).pop(true),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
+    try {
+      // Confirmation dialog
+      bool confirmDelete = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Confirm Delete"),
+            content: const Text("Are you sure you want to delete this product?"),
+            actions: <Widget>[
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              TextButton(
+                child: const Text("Delete"),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
 
-    if (!confirmDelete) {
+      if (!confirmDelete) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // Delete the product document from Firestore first
+      await _firestore.collection('Products').doc(productId).delete();
+      
+      // Then try to delete from Firebase Storage if the URL exists
+      if (imageUrl.isNotEmpty) {
+        try {
+          // Extract reference from URL
+          Reference ref = _firebaseStorage.refFromURL(imageUrl);
+          await ref.delete();
+        } catch (e) {
+          print('Error deleting image from storage: $e');
+          // Continue even if image deletion fails
+        }
+      }
+
+      // Remove from local list
+      _products.removeWhere((product) => product['id'] == productId);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Product deleted successfully"))
+      );
+    } catch (e) {
+      print('Error deleting product: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error deleting product: ${e.toString()}"))
+      );
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return;
     }
-
-    // Delete from Firebase Storage
-    final String path = extractPathFromUrl(imageUrl);
-    print('Deleting path: $path');
-    await _firebaseStorage.ref(path).delete();
-    print('Firebase Storage deletion successful');
-
-    // Delete the product document from Firestore
-    if (image != null) {
-      print('Deleting Firestore product: $image');
-      await _firestore.collection('Products').doc(image).delete(); // Delete the document
-      print('Firestore product deletion successful');
-    } else {
-        print("Product image is null");
-    }
-
-    // Remove from local list
-    _products.removeWhere((product) => product['image'] == imageUrl);
-
-    _isLoading = false;
-    notifyListeners();
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Product deleted successfully.")));
-
-  } on FirebaseException catch (e) {
-    _isLoading = false;
-    notifyListeners();
-
-    // Show error message
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Firebase error deleting product: ${e.message}")));
-    print("Firebase error deleting product: ${e.message}");
-  } catch (e) {
-    _isLoading = false;
-    notifyListeners();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("An unexpected error occurred.")));
-    print("Error deleting product: $e");
-  }
-}
-
-  // Extract file path from Firebase Storage URL
-  String extractPathFromUrl(String url) {
-    Uri uri = Uri.parse(url);
-    String encodedPath = uri.pathSegments.last;
-    return Uri.decodeComponent(encodedPath);
   }
 
   // Upload image
@@ -158,13 +167,21 @@ class Storage with ChangeNotifier {
     notifyListeners();
 
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      // Generate unique filename
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
       Reference storageReference = _firebaseStorage.ref().child('images/$folder/$fileName');
 
-      UploadTask uploadTask = storageReference.putFile(imageFile);
-      await uploadTask.whenComplete(() {});
-      String imageUrl = await storageReference.getDownloadURL();
-
+      // Upload with metadata
+      SettableMetadata metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'uploaded_by': 'tjmarket_app'},
+      );
+      
+      UploadTask uploadTask = storageReference.putFile(imageFile, metadata);
+      TaskSnapshot taskSnapshot = await uploadTask;
+      
+      // Get download URL
+      String imageUrl = await taskSnapshot.ref.getDownloadURL();
       return imageUrl;
     } catch (e) {
       print('Error uploading image: $e');
@@ -175,42 +192,55 @@ class Storage with ChangeNotifier {
     }
   }
 
-  // Upload profile picture and save user ID and image path to Firestore
+  // Upload profile picture
   Future<void> uploadProfilePicture(String userId) async {
     final ImagePicker picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile == null) return; // User cancelled
-
+    
     try {
-      String fileName = "profile_${DateTime.now().millisecondsSinceEpoch}";
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800, // Optimize image size
+        imageQuality: 85, // Reduce quality slightly for better performance
+      );
+
+      if (pickedFile == null) return; // User cancelled
+
+      String fileName = "profile_${userId}_${DateTime.now().millisecondsSinceEpoch}";
       Reference storageReference = _firebaseStorage.ref().child('images/profiles/$fileName');
 
-      UploadTask uploadTask = storageReference.putFile(File(pickedFile.path));
+      // Upload with better metadata
+      SettableMetadata metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {'user_id': userId, 'type': 'profile'},
+      );
+      
+      UploadTask uploadTask = storageReference.putFile(File(pickedFile.path), metadata);
       await uploadTask.whenComplete(() {});
       String imageUrl = await storageReference.getDownloadURL();
 
-      // Save the user ID and image path to Firestore
-      await _firestore.collection('users').doc(userId).set({
-        'userId': userId,
-        'profileImagePath': storageReference.fullPath, // Store the path, not the URL
-      }, SetOptions(merge: true));
+      // Update user document with profile image info
+      await _firestore.collection('users').doc(userId).update({
+        'profileImagePath': storageReference.fullPath,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
 
       _profileImageUrl = imageUrl;
       notifyListeners();
+      
     } catch (e) {
       print("Error uploading profile picture: $e");
     }
   }
 
-  // Fetch profile picture URL from Firestore
+  // Fetch profile picture URL
   Future<void> fetchProfilePicture(String userId) async {
     try {
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
+      
       if (userDoc.exists) {
         String? profileImagePath = userDoc['profileImagePath'];
-        if (profileImagePath != null) {
-          // Get the download URL from the stored path
+        
+        if (profileImagePath != null && profileImagePath.isNotEmpty) {
           _profileImageUrl = await _firebaseStorage.ref(profileImagePath).getDownloadURL();
           notifyListeners();
         }
